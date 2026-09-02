@@ -22,7 +22,7 @@ export default function LogVisit() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState(venueIdParam ? 'speedtest' : 'venue')
+  const [step, setStep] = useState(venueIdParam ? 'details' : 'venue')
   const [locStatus, setLocStatus] = useState('idle') // idle | locating | error
   const [locError, setLocError] = useState(null)
   const [coords, setCoords] = useState(null)
@@ -107,6 +107,13 @@ export default function LogVisit() {
       setSpeedStatus('error')
     }
   }
+
+  // Kick off the speed test as soon as the details screen is reached, so it runs in the
+  // background while the user fills in the rest of the form instead of blocking a dedicated step.
+  useEffect(() => {
+    if (step === 'details' && speedStatus === 'idle') runTest()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   async function handleSave() {
     setSaving(true)
@@ -196,7 +203,7 @@ export default function LogVisit() {
               <button
                 type="button"
                 disabled={!venue.name}
-                onClick={() => setStep('speedtest')}
+                onClick={() => setStep('details')}
                 className="w-full text-sm font-medium py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
               >
                 Continue
@@ -206,7 +213,7 @@ export default function LogVisit() {
         </div>
       )}
 
-      {step === 'speedtest' && (
+      {step === 'details' && (
         <div className="space-y-4">
           {venueIdParam && existingVenue && (
             <div className="text-sm text-muted-foreground">Logging a visit to <span className="font-medium text-foreground">{existingVenue.name}</span></div>
@@ -214,19 +221,9 @@ export default function LogVisit() {
           {!venueIdParam && venueConfirmed && (
             <div className="text-sm text-muted-foreground">Logging a visit to <span className="font-medium text-foreground">{venue.name}</span></div>
           )}
-          <SpeedTestGauge status={speedStatus} result={speedResult} onStart={runTest} />
-          <button
-            type="button"
-            onClick={() => setStep('details')}
-            className="w-full text-sm font-medium py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700"
-          >
-            {speedStatus === 'done' ? 'Continue' : 'Skip and continue'}
-          </button>
-        </div>
-      )}
 
-      {step === 'details' && (
-        <div className="space-y-4">
+          <SpeedTestGauge status={speedStatus} result={speedResult} onStart={runTest} />
+
           <div className="rounded-lg border bg-card p-4 space-y-3">
             <div className="text-sm font-medium">Wifi & access</div>
             <div className="grid grid-cols-2 gap-3">
@@ -291,6 +288,12 @@ export default function LogVisit() {
               <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="text-sm" />
             </Field>
           </div>
+
+          {speedStatus === 'running' && (
+            <div className="text-xs text-muted-foreground">
+              Speed test still running — saving now will save the visit without a speed result.
+            </div>
+          )}
 
           {saveError && <div className="text-sm text-destructive">{saveError}</div>}
 
