@@ -1,6 +1,17 @@
-import { useEffect, useState } from 'react'
-import { Search, MapPin, Pencil } from 'lucide-react'
-import { places } from '@/api/client'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Search, MapPin, Pencil, CheckCircle2 } from 'lucide-react'
+import { places, venues as venuesApi } from '@/api/client'
+
+// Sorts already-logged venues to the front (stable otherwise), so a place you've
+// visited before doesn't get buried below unfamiliar nearby suggestions.
+function prioritize(results, loggedByPlaceId) {
+  return [...results].sort((a, b) => {
+    const aLogged = loggedByPlaceId.has(a.place_id) ? 0 : 1
+    const bLogged = loggedByPlaceId.has(b.place_id) ? 0 : 1
+    return aLogged - bLogged
+  })
+}
 
 export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
   const [nearby, setNearby] = useState([])
@@ -9,6 +20,18 @@ export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
+
+  const { data: loggedVenues } = useQuery({
+    queryKey: ['venues', {}],
+    queryFn: () => venuesApi.list({}),
+  })
+  const loggedByPlaceId = useMemo(() => {
+    const map = new Map()
+    for (const v of loggedVenues || []) {
+      if (v.google_place_id) map.set(v.google_place_id, v)
+    }
+    return map
+  }, [loggedVenues])
 
   useEffect(() => {
     if (lat == null || lng == null) return
@@ -34,6 +57,9 @@ export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
     }
   }
 
+  const nearbySorted = useMemo(() => prioritize(nearby, loggedByPlaceId), [nearby, loggedByPlaceId])
+  const searchSorted = useMemo(() => prioritize(searchResults, loggedByPlaceId), [searchResults, loggedByPlaceId])
+
   return (
     <div className="space-y-4">
       {lat != null && lng != null && (
@@ -46,16 +72,8 @@ export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
             <div className="text-sm text-muted-foreground">No venues found nearby — try search or enter manually.</div>
           )}
           <div className="space-y-1.5">
-            {nearby.map((p) => (
-              <button
-                type="button"
-                key={p.place_id}
-                onClick={() => onSelect(p)}
-                className="w-full text-left px-3 py-2 rounded-md border bg-card hover:border-cyan-500 hover:bg-accent transition-colors"
-              >
-                <div className="font-medium text-sm">{p.name}</div>
-                <div className="text-xs text-muted-foreground">{p.address}</div>
-              </button>
+            {nearbySorted.map((p) => (
+              <PlaceOption key={p.place_id} place={p} logged={loggedByPlaceId.get(p.place_id)} onSelect={onSelect} />
             ))}
           </div>
         </div>
@@ -82,18 +100,10 @@ export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
             {searching ? '…' : 'Search'}
           </button>
         </form>
-        {searchResults.length > 0 && (
+        {searchSorted.length > 0 && (
           <div className="space-y-1.5 mt-2">
-            {searchResults.map((p) => (
-              <button
-                type="button"
-                key={p.place_id}
-                onClick={() => onSelect(p)}
-                className="w-full text-left px-3 py-2 rounded-md border bg-card hover:border-cyan-500 hover:bg-accent transition-colors"
-              >
-                <div className="font-medium text-sm">{p.name}</div>
-                <div className="text-xs text-muted-foreground">{p.address}</div>
-              </button>
+            {searchSorted.map((p) => (
+              <PlaceOption key={p.place_id} place={p} logged={loggedByPlaceId.get(p.place_id)} onSelect={onSelect} />
             ))}
           </div>
         )}
@@ -107,5 +117,30 @@ export default function PlacesSuggestPicker({ lat, lng, onSelect, onManual }) {
         <Pencil className="w-3.5 h-3.5" /> Enter venue manually instead
       </button>
     </div>
+  )
+}
+
+function PlaceOption({ place, logged, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(place)}
+      className={`w-full text-left px-3 py-2 rounded-md border transition-colors ${
+        logged
+          ? 'border-cyan-500 bg-accent hover:bg-accent/70'
+          : 'bg-card hover:border-cyan-500 hover:bg-accent'
+      }`}
+    >
+      <div className="flex items-center gap-1.5">
+        <div className="font-medium text-sm">{place.name}</div>
+        {logged && (
+          <span className="flex items-center gap-1 text-[11px] font-medium text-cyan-700 shrink-0">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Logged · {logged.visit_count} visit{logged.visit_count === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
+      <div className="text-xs text-muted-foreground">{place.address}</div>
+    </button>
   )
 }

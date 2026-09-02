@@ -9,7 +9,7 @@ async function request(method, path, body) {
   const res = await fetch(`${BASE}${path}`, opts)
   if (res.status === 204) return null
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Request failed')
+  if (!res.ok) throw errorWithData(data)
   return data
 }
 
@@ -17,8 +17,16 @@ async function requestForm(method, path, formData) {
   const res = await fetch(`${BASE}${path}`, { method, body: formData })
   if (res.status === 204) return null
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Request failed')
+  if (!res.ok) throw errorWithData(data)
   return data
+}
+
+// Attaches the parsed error body to the Error so callers can inspect structured
+// fields (e.g. the existing venue on a 409 dedup conflict), not just the message.
+function errorWithData(data) {
+  const err = new Error(data.error || 'Request failed')
+  err.data = data
+  return err
 }
 
 export const venues = {

@@ -140,8 +140,15 @@ export default function LogVisit() {
     try {
       let venueId = venueIdParam
       if (!venueId) {
-        const created = await venuesApi.create(venue)
-        venueId = created.id
+        try {
+          const created = await venuesApi.create(venue)
+          venueId = created.id
+        } catch (err) {
+          // Dedup conflict: this Places suggestion is already one of our venues —
+          // attach the visit to it instead of failing the whole save.
+          if (err.data?.venue) venueId = err.data.venue.id
+          else throw err
+        }
       }
 
       const fd = new FormData()
