@@ -41,6 +41,7 @@ export default function LogVisit() {
   const [photo, setPhoto] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [pendingSave, setPendingSave] = useState(false)
 
   // Load existing venue if navigated from a venue's detail page.
   useEffect(() => {
@@ -114,6 +115,24 @@ export default function LogVisit() {
     if (step === 'details' && speedStatus === 'idle') runTest()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
+
+  // If Save is hit while the speed test is still running, wait for it to finish (or fail)
+  // instead of saving with blank speed numbers.
+  useEffect(() => {
+    if (pendingSave && speedStatus !== 'running') {
+      setPendingSave(false)
+      handleSave()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSave, speedStatus])
+
+  function onSaveClick() {
+    if (speedStatus === 'running') {
+      setPendingSave(true)
+      return
+    }
+    handleSave()
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -289,9 +308,9 @@ export default function LogVisit() {
             </Field>
           </div>
 
-          {speedStatus === 'running' && (
-            <div className="text-xs text-muted-foreground">
-              Speed test still running — saving now will save the visit without a speed result.
+          {pendingSave && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Waiting for the speed test to finish before saving…
             </div>
           )}
 
@@ -299,11 +318,11 @@ export default function LogVisit() {
 
           <button
             type="button"
-            disabled={saving}
-            onClick={handleSave}
+            disabled={saving || pendingSave}
+            onClick={onSaveClick}
             className="w-full text-sm font-medium py-2.5 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save visit'}
+            {saving ? 'Saving…' : pendingSave ? 'Waiting for speed test…' : 'Save visit'}
           </button>
         </div>
       )}
