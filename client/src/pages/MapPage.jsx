@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import { venues as venuesApi } from '@/api/client'
+import { getCurrentPosition } from '@/lib/geolocation'
+
+const DEFAULT_CENTER = [20, 0]
+const DEFAULT_ZOOM = 2
 
 function speedColor(mbps) {
   if (mbps == null) return '#94a3b8'
@@ -14,6 +19,42 @@ function speedColor(mbps) {
 function speedRadius(mbps) {
   if (mbps == null) return 5
   return Math.min(6 + mbps / 25, 16)
+}
+
+// Weighted by visit_count so venues you've tested more often pull the centroid harder —
+// a cheap proxy for "the area you're usually in" when we can't just ask the browser.
+function mostVisitedCentroid(venues) {
+  const points = venues.filter((v) => v.lat != null && v.lng != null && v.visit_count > 0)
+  if (points.length === 0) return null
+  const totalWeight = points.reduce((sum, v) => sum + v.visit_count, 0)
+  const lat = points.reduce((sum, v) => sum + v.lat * v.visit_count, 0) / totalWeight
+  const lng = points.reduce((sum, v) => sum + v.lng * v.visit_count, 0) / totalWeight
+  return [lat, lng]
+}
+
+// Recenters the map once, after mount: tries the browser's geolocation first (most accurate —
+// this is genuinely where you are right now), falling back to the visit-weighted centroid of
+// logged venues (roughly where you tend to be), and finally a world view if neither is available.
+function AutoLocate({ venues }) {
+  const map = useMap()
+
+  useEffect(() => {
+    let cancelled = false
+
+    getCurrentPosition({ timeout: 6000 })
+      .then((pos) => {
+        if (!cancelled) map.setView([pos.lat, pos.lng], 13)
+      })
+      .catch(() => {
+        const centroid = mostVisitedCentroid(venues)
+        if (!cancelled && centroid) map.setView(centroid, 12)
+      })
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return null
 }
 
 export default function MapPage() {
@@ -30,13 +71,14 @@ export default function MapPage() {
 
   return (
     <div className="h-[calc(100vh-6rem)] rounded-lg overflow-hidden border">
-      <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }}>
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains="abcd"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          subdomains="abc"
           maxZoom={19}
         />
+        <AutoLocate venues={venues || []} />
         {points.map((v) => (
           <CircleMarker
             key={v.id}
