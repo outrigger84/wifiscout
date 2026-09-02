@@ -34,6 +34,7 @@ db.exec(`
     ping_ms REAL,
     jitter_ms REAL,
     ssid TEXT,
+    rssi REAL,
     auth_method TEXT CHECK(auth_method IN ('open','wpa2','wpa3','captive_portal')),
     wifi_password TEXT,
     toilet_door_code TEXT,
@@ -51,5 +52,10 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_visits_venue_id ON visits(venue_id);
 `)
+
+const visitColumns = db.prepare("PRAGMA table_info(visits)").all().map((c) => c.name)
+if (!visitColumns.includes('rssi')) {
+  db.exec('ALTER TABLE visits ADD COLUMN rssi REAL')
+}
 
 export default db

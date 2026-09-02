@@ -63,12 +63,13 @@ export default function VenueDetail() {
               <Metric label="Jitter" value={v.jitter_ms} unit="ms" />
             </div>
 
-            {(v.ssid || v.wifi_password || v.auth_method) && (
+            {(v.ssid || v.wifi_password || v.auth_method || v.rssi != null) && (
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 {v.ssid && (
                   <div className="flex items-center gap-1.5">
                     <Wifi className="w-3.5 h-3.5 text-cyan-600" /> {v.ssid}
                     {v.auth_method && <span className="text-xs text-muted-foreground">({v.auth_method})</span>}
+                    {v.rssi != null && <span className="text-xs text-muted-foreground">{v.rssi} dBm</span>}
                   </div>
                 )}
                 {v.wifi_password && (

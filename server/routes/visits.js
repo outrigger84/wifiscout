@@ -20,7 +20,7 @@ const upload = multer({
 
 export const visitsRouter = Router()
 
-const NUMERIC_FIELDS = ['download_mbps', 'upload_mbps', 'ping_ms', 'jitter_ms', 'lat', 'lng']
+const NUMERIC_FIELDS = ['download_mbps', 'upload_mbps', 'ping_ms', 'jitter_ms', 'lat', 'lng', 'rssi']
 const RATING_FIELDS = ['seating_rating', 'noise_level', 'food_quality']
 const TEXT_FIELDS = ['ssid', 'auth_method', 'wifi_password', 'toilet_door_code', 'power_outlets', 'wifi_cost', 'notes']
 
@@ -49,12 +49,12 @@ visitsRouter.post('/', upload.single('photo'), (req, res) => {
   const result = db.prepare(`
     INSERT INTO visits (
       venue_id, download_mbps, upload_mbps, ping_ms, jitter_ms,
-      ssid, auth_method, wifi_password, toilet_door_code,
+      ssid, rssi, auth_method, wifi_password, toilet_door_code,
       seating_rating, power_outlets, noise_level, food_quality, wifi_cost,
       notes, photo_path, lat, lng
     ) VALUES (
       @venue_id, @download_mbps, @upload_mbps, @ping_ms, @jitter_ms,
-      @ssid, @auth_method, @wifi_password, @toilet_door_code,
+      @ssid, @rssi, @auth_method, @wifi_password, @toilet_door_code,
       @seating_rating, @power_outlets, @noise_level, @food_quality, @wifi_cost,
       @notes, @photo_path, @lat, @lng
     )
@@ -71,7 +71,7 @@ visitsRouter.patch('/:id', (req, res) => {
   db.prepare(`
     UPDATE visits SET
       download_mbps = @download_mbps, upload_mbps = @upload_mbps, ping_ms = @ping_ms, jitter_ms = @jitter_ms,
-      ssid = @ssid, auth_method = @auth_method, wifi_password = @wifi_password, toilet_door_code = @toilet_door_code,
+      ssid = @ssid, rssi = @rssi, auth_method = @auth_method, wifi_password = @wifi_password, toilet_door_code = @toilet_door_code,
       seating_rating = @seating_rating, power_outlets = @power_outlets, noise_level = @noise_level,
       food_quality = @food_quality, wifi_cost = @wifi_cost, notes = @notes
     WHERE id = @id

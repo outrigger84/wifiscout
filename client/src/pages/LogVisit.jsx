@@ -34,7 +34,7 @@ export default function LogVisit() {
   const [speedResult, setSpeedResult] = useState(null)
 
   const [form, setForm] = useState({
-    ssid: '', auth_method: 'wpa2', wifi_password: '', toilet_door_code: '',
+    ssid: '', rssi: '', auth_method: 'wpa2', wifi_password: '', toilet_door_code: '',
     seating_rating: '', power_outlets: '', noise_level: '', food_quality: '',
     wifi_cost: '', notes: '',
   })
@@ -52,7 +52,13 @@ export default function LogVisit() {
   useEffect(() => {
     if (venueIdParam) return
     const params = readLogVisitParams(searchParams)
-    if (params.ssid) setForm((f) => ({ ...f, ssid: params.ssid }))
+    if (params.ssid || params.rssi != null) {
+      setForm((f) => ({
+        ...f,
+        ssid: params.ssid || f.ssid,
+        rssi: params.rssi != null ? params.rssi : f.rssi,
+      }))
+    }
     if (params.lat != null && params.lng != null) {
       setCoords({ lat: params.lat, lng: params.lng })
     } else {
@@ -236,6 +242,10 @@ export default function LogVisit() {
                   <option value="wpa3">WPA3</option>
                   <option value="captive_portal">Captive portal</option>
                 </select>
+              </Field>
+              <Field label="Signal strength (RSSI, dBm)">
+                <input type="number" className="w-full rounded-md border px-3 py-2 text-sm bg-background" value={form.rssi}
+                  placeholder="e.g. -55" onChange={(e) => setForm({ ...form, rssi: e.target.value })} />
               </Field>
             </div>
             <Field label="Wifi password">
