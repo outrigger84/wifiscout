@@ -2,6 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { Download, Upload, Wifi, KeyRound, DoorClosed, PlusCircle, Trash2 } from 'lucide-react'
 import { venues as venuesApi, visits as visitsApi } from '@/api/client'
+import { computeTrend } from '@/lib/trend'
+import TrendBadge from '@/components/TrendBadge'
+import SpeedTrendChart from '@/components/SpeedTrendChart'
 
 const POWER_LABELS = { plenty: 'Plenty of outlets', some: 'Some outlets', none: 'No outlets' }
 const COST_LABELS = { free: 'Free', paid: 'Paid', purchase_required: 'Purchase required' }
@@ -25,12 +28,17 @@ export default function VenueDetail() {
   if (error) return <div className="text-sm text-destructive">{error.message}</div>
   if (!venue) return null
 
+  const trend = venue.visits.length >= 2
+    ? computeTrend(venue.visits[0].download_mbps, venue.visits[1].download_mbps)
+    : null
+
   return (
     <div>
       <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold">{venue.name}</h1>
           <div className="text-sm text-muted-foreground">{venue.address}</div>
+          {trend && <div className="mt-1"><TrendBadge trend={trend} /></div>}
         </div>
         <Link
           to={`/venues/${venue.id}/log`}
@@ -39,6 +47,12 @@ export default function VenueDetail() {
           <PlusCircle className="w-4 h-4" /> Log a visit here
         </Link>
       </div>
+
+      {venue.visits.length >= 2 && (
+        <div className="mb-4">
+          <SpeedTrendChart visits={venue.visits} />
+        </div>
+      )}
 
       <h2 className="text-sm font-semibold text-muted-foreground mb-2">Visit history</h2>
       <div className="space-y-3">

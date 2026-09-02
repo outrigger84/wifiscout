@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Download, Upload, Star, Coffee } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { computeTrend } from '@/lib/trend'
+import TrendBadge from '@/components/TrendBadge'
 
 const TYPE_LABELS = {
   coffee_shop: 'Coffee shop',
@@ -10,6 +12,8 @@ const TYPE_LABELS = {
 }
 
 export default function VenueCard({ venue }) {
+  const trend = computeTrend(venue.latest_download_mbps, venue.previous_download_mbps)
+
   return (
     <Link
       to={`/venues/${venue.id}`}
@@ -27,6 +31,7 @@ export default function VenueCard({ venue }) {
 
       <div className="mt-3 flex items-center gap-4 text-sm">
         <Stat icon={Download} value={venue.latest_download_mbps} unit="Mbps" />
+        <TrendBadge trend={trend} />
         <Stat icon={Upload} value={venue.latest_upload_mbps} unit="Mbps" />
         {venue.avg_rating != null && (
           <div className="flex items-center gap-1 text-muted-foreground">
