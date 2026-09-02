@@ -250,6 +250,14 @@ export default function LogVisit() {
 
           <SpeedTestGauge status={speedStatus} result={speedResult} onStart={runTest} />
 
+          <SaveButton saving={saving} pendingSave={pendingSave} onClick={onSaveClick} />
+          {pendingSave && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Waiting for the speed test to finish before saving…
+            </div>
+          )}
+          {saveError && <div className="text-sm text-destructive">{saveError}</div>}
+
           <div className="rounded-lg border bg-card p-4 space-y-3">
             <div className="text-sm font-medium">Wifi & access</div>
             <div className="grid grid-cols-2 gap-3">
@@ -323,17 +331,23 @@ export default function LogVisit() {
 
           {saveError && <div className="text-sm text-destructive">{saveError}</div>}
 
-          <button
-            type="button"
-            disabled={saving || pendingSave}
-            onClick={onSaveClick}
-            className="w-full text-sm font-medium py-2.5 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : pendingSave ? 'Waiting for speed test…' : 'Save visit'}
-          </button>
+          <SaveButton saving={saving} pendingSave={pendingSave} onClick={onSaveClick} />
         </div>
       )}
     </div>
+  )
+}
+
+function SaveButton({ saving, pendingSave, onClick }) {
+  return (
+    <button
+      type="button"
+      disabled={saving || pendingSave}
+      onClick={onClick}
+      className="w-full text-sm font-medium py-2.5 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
+    >
+      {saving ? 'Saving…' : pendingSave ? 'Waiting for speed test…' : 'Save visit'}
+    </button>
   )
 }
 
