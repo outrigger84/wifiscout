@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Download, Upload, Wifi, KeyRound, DoorClosed, PlusCircle, Trash2 } from 'lucide-react'
 import { venues as venuesApi, visits as visitsApi } from '@/api/client'
 import { computeTrend } from '@/lib/trend'
@@ -11,6 +11,7 @@ const COST_LABELS = { free: 'Free', paid: 'Paid', purchase_required: 'Purchase r
 
 export default function VenueDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: venue, isLoading, error } = useQuery({
     queryKey: ['venue', id],
@@ -22,6 +23,17 @@ export default function VenueDetail() {
     await visitsApi.remove(visitId)
     queryClient.invalidateQueries({ queryKey: ['venue', id] })
     queryClient.invalidateQueries({ queryKey: ['venues'] })
+  }
+
+  async function deleteVenue() {
+    const visitCount = venue.visits.length
+    const warning = visitCount > 0
+      ? `Delete "${venue.name}" and all ${visitCount} visit${visitCount === 1 ? '' : 's'} logged against it? This can't be undone.`
+      : `Delete "${venue.name}"? This can't be undone.`
+    if (!confirm(warning)) return
+    await venuesApi.remove(id)
+    queryClient.invalidateQueries({ queryKey: ['venues'] })
+    navigate('/')
   }
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>
@@ -40,12 +52,21 @@ export default function VenueDetail() {
           <div className="text-sm text-muted-foreground">{venue.address}</div>
           {trend && <div className="mt-1"><TrendBadge trend={trend} /></div>}
         </div>
-        <Link
-          to={`/venues/${venue.id}/log`}
-          className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 shrink-0"
-        >
-          <PlusCircle className="w-4 h-4" /> Log a visit here
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to={`/venues/${venue.id}/log`}
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700"
+          >
+            <PlusCircle className="w-4 h-4" /> Log a visit here
+          </Link>
+          <button
+            onClick={deleteVenue}
+            title="Delete venue"
+            className="p-2 rounded-md border text-muted-foreground hover:text-destructive hover:border-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {venue.visits.length >= 2 && (
