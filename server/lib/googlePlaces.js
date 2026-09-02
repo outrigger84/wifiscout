@@ -1,4 +1,9 @@
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY
+// Read lazily, not into a top-level const: ES module imports are hoisted and run before
+// index.js's dotenv.config() call, so a top-level read here would always see undefined.
+function apiKey() {
+  return process.env.GOOGLE_PLACES_API_KEY
+}
+
 const NEARBY_URL = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
 const TEXT_SEARCH_URL = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
 
@@ -14,12 +19,13 @@ function trim(result) {
 }
 
 export async function nearbySearch(lat, lng) {
-  if (!API_KEY) throw new Error('GOOGLE_PLACES_API_KEY is not configured')
+  const key = apiKey()
+  if (!key) throw new Error('GOOGLE_PLACES_API_KEY is not configured')
   const url = new URL(NEARBY_URL)
   url.searchParams.set('location', `${lat},${lng}`)
   url.searchParams.set('radius', '150')
   url.searchParams.set('type', 'cafe')
-  url.searchParams.set('key', API_KEY)
+  url.searchParams.set('key', key)
 
   const res = await fetch(url)
   const data = await res.json()
@@ -30,10 +36,11 @@ export async function nearbySearch(lat, lng) {
 }
 
 export async function textSearch(query) {
-  if (!API_KEY) throw new Error('GOOGLE_PLACES_API_KEY is not configured')
+  const key = apiKey()
+  if (!key) throw new Error('GOOGLE_PLACES_API_KEY is not configured')
   const url = new URL(TEXT_SEARCH_URL)
   url.searchParams.set('query', query)
-  url.searchParams.set('key', API_KEY)
+  url.searchParams.set('key', key)
 
   const res = await fetch(url)
   const data = await res.json()
